@@ -338,7 +338,7 @@ async function navigate(dir) {
   fillForm(sheetRows[currentRowIdx]);
   setViewMode(true);
   document.getElementById('btnBack').disabled = currentRowIdx <= 0;
-  document.getElementById('btnNext').disabled = false;
+  document.getElementById('btnNext').disabled = currentRowIdx >= sheetRows.length - 1;
 }
 
 function goToday() {
