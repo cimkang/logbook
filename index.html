@@ -327,9 +327,10 @@ async function navigate(dir) {
     return;
   }
   if (!isViewMode) {
-    currentRowIdx = sheetRows.length;
+    currentRowIdx = sheetRows.length - 1;
+  } else {
+    currentRowIdx += dir;
   }
-  currentRowIdx += dir;
   if (currentRowIdx < 0) currentRowIdx = 0;
   if (currentRowIdx >= sheetRows.length) {
     goToday();
