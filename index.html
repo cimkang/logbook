@@ -49,6 +49,12 @@
   .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; padding: 11px 22px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 99; white-space: nowrap; }
   .toast.show { opacity: 1; }
   .section-tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #888; margin-bottom: 12px; }
+  .expense-grid { display: grid; grid-template-columns: 50px 120px 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .expense-label { font-size: 14px; color: #555; font-weight: 600; }
+  .expense-amount { padding: 8px 10px; font-size: 14px; border: 1px solid #e0ddd6; border-radius: 8px; background: #faf9f7; color: #1a1a1a; font-family: inherit; text-align: right; width: 100%; }
+  .expense-desc { padding: 8px 10px; font-size: 14px; border: 1px solid #e0ddd6; border-radius: 8px; background: #faf9f7; color: #1a1a1a; font-family: inherit; width: 100%; }
+  .expense-amount:focus, .expense-desc:focus { outline: none; border-color: #aaa; background: #fff; }
+  .expense-amount.readonly, .expense-desc.readonly { background: #f0ede8; color: #555; pointer-events: none; }
   @media (max-width: 480px) {
     .health-grid { grid-template-columns: repeat(2, 1fr); }
     input[type="date"] { width: 100%; }
@@ -96,6 +102,25 @@
   <div class="card">
     <div class="section-tag">건강관리</div>
     <div class="health-grid" id="healthGrid"></div>
+  </div>
+
+  <div class="card">
+    <div class="section-tag">지출</div>
+    <div class="expense-grid">
+      <span class="expense-label">현금</span>
+      <input type="number" class="expense-amount" id="expCashAmt" placeholder="0" min="0">
+      <input type="text" class="expense-desc" id="expCashDesc" placeholder="내역...">
+    </div>
+    <div class="expense-grid">
+      <span class="expense-label">카드</span>
+      <input type="number" class="expense-amount" id="expCardAmt" placeholder="0" min="0">
+      <input type="text" class="expense-desc" id="expCardDesc" placeholder="내역...">
+    </div>
+    <div class="expense-grid">
+      <span class="expense-label">이체</span>
+      <input type="number" class="expense-amount" id="expTransferAmt" placeholder="0" min="0">
+      <input type="text" class="expense-desc" id="expTransferDesc" placeholder="내역...">
+    </div>
   </div>
 
   <div class="card">
@@ -193,6 +218,12 @@ function getFormData() {
     health: healthItems.filter(function(i) { return checks[i]; }),
     reflection: document.getElementById('reflection').value,
     tomorrow: document.getElementById('tomorrow').value,
+    expCashAmt: document.getElementById('expCashAmt').value,
+    expCashDesc: document.getElementById('expCashDesc').value,
+    expCardAmt: document.getElementById('expCardAmt').value,
+    expCardDesc: document.getElementById('expCardDesc').value,
+    expTransferAmt: document.getElementById('expTransferAmt').value,
+    expTransferDesc: document.getElementById('expTransferDesc').value,
     savedAt: new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'})
   };
 }
@@ -253,6 +284,12 @@ function fillForm(data, isTempData) {
   document.getElementById('memo').value = data.memo || '';
   document.getElementById('reflection').value = data.reflection || '';
   document.getElementById('tomorrow').value = data.tomorrow || '';
+  document.getElementById('expCashAmt').value = data.expCashAmt || '';
+  document.getElementById('expCashDesc').value = data.expCashDesc || '';
+  document.getElementById('expCardAmt').value = data.expCardAmt || '';
+  document.getElementById('expCardDesc').value = data.expCardDesc || '';
+  document.getElementById('expTransferAmt').value = data.expTransferAmt || '';
+  document.getElementById('expTransferDesc').value = data.expTransferDesc || '';
   var healthArr = [];
   if (isTempData) {
     healthArr = data.health || [];
@@ -273,7 +310,7 @@ function fillForm(data, isTempData) {
 // ── 조회 모드 전환 ──
 function setViewMode(on) {
   viewMode = on;
-  var fields = ['today_todo','activity','memo','reflection','tomorrow'];
+  var fields = ['today_todo','activity','memo','reflection','tomorrow','expCashDesc','expCardDesc','expTransferDesc'];
   fields.forEach(function(id) {
     var el = document.getElementById(id);
     if (on) el.classList.add('readonly');
@@ -282,6 +319,11 @@ function setViewMode(on) {
   var df = document.getElementById('dateField');
   if (on) df.classList.add('readonly');
   else df.classList.remove('readonly');
+  ['expCashAmt','expCardAmt','expTransferAmt'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (on) el.classList.add('readonly');
+    else el.classList.remove('readonly');
+  });
   healthItems.forEach(function(item) {
     var div = document.getElementById('hi_' + item);
     if (div) {
@@ -388,6 +430,12 @@ function clearForm() {
   document.getElementById('memo').value = '';
   document.getElementById('reflection').value = '';
   document.getElementById('tomorrow').value = '';
+  document.getElementById('expCashAmt').value = '';
+  document.getElementById('expCashDesc').value = '';
+  document.getElementById('expCardAmt').value = '';
+  document.getElementById('expCardDesc').value = '';
+  document.getElementById('expTransferAmt').value = '';
+  document.getElementById('expTransferDesc').value = '';
   healthItems.forEach(function(item) {
     checks[item] = false;
     var cb = document.getElementById('cb_' + item);
@@ -413,7 +461,13 @@ async function saveEntry() {
     memo: document.getElementById('memo').value,
     health: healthItems.filter(function(i) { return checks[i]; }).join(', '),
     reflection: document.getElementById('reflection').value,
-    tomorrow: document.getElementById('tomorrow').value
+    tomorrow: document.getElementById('tomorrow').value,
+    expCashAmt: document.getElementById('expCashAmt').value,
+    expCashDesc: document.getElementById('expCashDesc').value,
+    expCardAmt: document.getElementById('expCardAmt').value,
+    expCardDesc: document.getElementById('expCardDesc').value,
+    expTransferAmt: document.getElementById('expTransferAmt').value,
+    expTransferDesc: document.getElementById('expTransferDesc').value
   };
   try {
     await fetch(SCRIPT_URL, {
