@@ -15,6 +15,7 @@
   .view-badge { display: none; font-size: 11px; font-weight: 600; color: #fff; background: #3a7bd5; padding: 3px 10px; border-radius: 20px; }
   .view-badge.show { display: inline-block; }
   .autosave-label { font-size: 11px; color: #aaa; }
+  .month-total { font-size: 11px; color: #3a7bd5; font-weight: 600; }
   .card { background: #fff; border-radius: 12px; border: 1px solid #e8e5de; padding: 1.5rem; margin-bottom: 1rem; }
   .field { margin-bottom: 1.25rem; }
   .field:last-child { margin-bottom: 0; }
@@ -70,6 +71,7 @@
       <span class="day-label" id="dayLabel"></span>
       <span class="view-badge" id="viewBadge">조회 중</span>
       <span class="autosave-label" id="autosaveLabel"></span>
+      <span class="month-total" id="monthTotal"></span>
     </div>
   </div>
 
@@ -480,8 +482,23 @@ async function saveEntry() {
     document.getElementById('autosaveLabel').textContent = '';
     showToast('✓ 구글 시트에 저장되었습니다');
     clearForm();
+    loadMonthTotal();
   } catch(e) {
     showToast('저장 실패 — 연결을 확인해주세요');
+  }
+}
+
+// ── 이달 지출 합계 ──
+async function loadMonthTotal() {
+  var month = getTodayStr().substring(0, 7);
+  try {
+    var res = await fetch(SCRIPT_URL + '?action=getMonthTotal&month=' + month);
+    var json = await res.json();
+    var total = json.total || 0;
+    var formatted = total.toLocaleString('ko-KR');
+    document.getElementById('monthTotal').textContent = '이달 지출: ' + formatted + '원';
+  } catch(e) {
+    document.getElementById('monthTotal').textContent = '';
   }
 }
 
@@ -500,6 +517,7 @@ var loaded = loadTempSave();
 if (loaded) showToast('임시저장된 내용을 불러왔습니다');
 loadYesterdayTodo();
 updateNavBtns();
+loadMonthTotal();
 </script>
 </body>
 </html>
