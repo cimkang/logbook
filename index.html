@@ -10,7 +10,11 @@
   .wrap { max-width: 680px; margin: 0 auto; padding: 2rem 1rem 4rem; }
   .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid #e0ddd6; }
   .header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
   .day-label { font-size: 13px; color: #888; }
+  .view-badge { display: none; font-size: 11px; font-weight: 600; color: #fff; background: #3a7bd5; padding: 3px 10px; border-radius: 20px; }
+  .view-badge.show { display: inline-block; }
+  .autosave-label { font-size: 11px; color: #aaa; }
   .card { background: #fff; border-radius: 12px; border: 1px solid #e8e5de; padding: 1.5rem; margin-bottom: 1rem; }
   .field { margin-bottom: 1.25rem; }
   .field:last-child { margin-bottom: 0; }
@@ -18,26 +22,43 @@
   input[type="date"] { width: 200px; padding: 8px 12px; font-size: 15px; border: 1px solid #e0ddd6; border-radius: 8px; background: #faf9f7; color: #1a1a1a; font-family: inherit; }
   textarea { width: 100%; padding: 10px 12px; font-size: 15px; border: 1px solid #e0ddd6; border-radius: 8px; background: #faf9f7; color: #1a1a1a; font-family: inherit; resize: vertical; line-height: 1.7; }
   input[type="date"]:focus, textarea:focus { outline: none; border-color: #aaa; background: #fff; }
+  textarea:read-only { background: #f7f6f3; color: #555; cursor: default; }
+  input[type="date"]:read-only { background: #f7f6f3; color: #555; cursor: default; }
   .health-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .health-item { display: flex; align-items: center; gap: 7px; padding: 9px 10px; border: 1px solid #e0ddd6; border-radius: 8px; background: #faf9f7; cursor: pointer; transition: all 0.15s; user-select: none; }
   .health-item:hover { background: #f0ede6; }
   .health-item.checked { background: #eef4ff; border-color: #b3caf5; }
+  .health-item.readonly { cursor: default; pointer-events: none; }
   .health-item input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: #3a7bd5; flex-shrink: 0; }
   .health-item span { font-size: 13px; color: #444; }
   .health-item.checked span { color: #2c5fb3; font-weight: 600; }
   .divider { border: none; border-top: 1px solid #e8e5de; margin: 1.25rem 0; }
-  .btn-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 1.5rem; }
-  button { padding: 10px 22px; font-size: 14px; font-family: inherit; border-radius: 8px; cursor: pointer; font-weight: 500; transition: all 0.15s; }
+  .btn-row { display: flex; gap: 8px; justify-content: space-between; align-items: center; margin-top: 1.5rem; flex-wrap: wrap; }
+  .btn-nav { display: flex; gap: 8px; }
+  .btn-actions { display: flex; gap: 8px; }
+  button { padding: 10px 18px; font-size: 14px; font-family: inherit; border-radius: 8px; cursor: pointer; font-weight: 500; transition: all 0.15s; }
   .btn-reset { background: #fff; color: #666; border: 1px solid #ddd; }
   .btn-reset:hover { background: #f5f3ef; }
+  .btn-temp { background: #fff; color: #3a7bd5; border: 1px solid #b3caf5; }
+  .btn-temp:hover { background: #eef4ff; }
   .btn-save { background: #1a1a1a; color: #fff; border: 1px solid #1a1a1a; }
   .btn-save:hover { background: #333; }
+  .btn-nav-item { background: #fff; color: #444; border: 1px solid #ddd; padding: 10px 14px; }
+  .btn-nav-item:hover { background: #f5f3ef; }
+  .btn-nav-item:disabled { opacity: 0.35; cursor: default; }
+  .btn-today { background: #fff; color: #3a7bd5; border: 1px solid #b3caf5; font-size: 13px; padding: 10px 14px; }
+  .btn-today:hover { background: #eef4ff; }
   .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; padding: 11px 22px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 99; white-space: nowrap; }
   .toast.show { opacity: 1; }
   .section-tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #888; margin-bottom: 12px; }
+  .yesterday-todo { background: #fffbf0; border: 1px solid #f0e0a0; border-radius: 8px; padding: 10px 12px; font-size: 14px; color: #7a5f00; line-height: 1.6; margin-bottom: 10px; display: none; }
+  .yesterday-todo.show { display: block; }
+  .yesterday-label { font-size: 11px; font-weight: 600; color: #a07800; margin-bottom: 4px; }
   @media (max-width: 480px) {
     .health-grid { grid-template-columns: repeat(2, 1fr); }
     input[type="date"] { width: 100%; }
+    .btn-row { gap: 8px; }
+    button { padding: 10px 12px; font-size: 13px; }
   }
 </style>
 </head>
@@ -45,13 +66,24 @@
 <div class="wrap">
   <div class="header">
     <h1>나의 하루 로그북</h1>
-    <span class="day-label" id="dayLabel"></span>
+    <div class="header-right">
+      <span class="day-label" id="dayLabel"></span>
+      <span class="view-badge" id="viewBadge">조회 중</span>
+      <span class="autosave-label" id="autosaveLabel"></span>
+    </div>
   </div>
 
   <div class="card">
     <div class="field">
       <label class="field-label">일자</label>
       <input type="date" id="dateField" />
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="field">
+      <label class="field-label">오늘 할 일</label>
+      <textarea id="today_todo" rows="4" placeholder="오늘 할 일 (전날 계획이 자동으로 채워집니다)..."></textarea>
     </div>
   </div>
 
@@ -74,6 +106,13 @@
 
   <div class="card">
     <div class="field">
+      <label class="field-label">오늘 할 일</label>
+      <textarea id="today_todo" rows="4" placeholder="오늘 할 일 (전날 계획이 자동으로 채워집니다)..."></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="field">
       <label class="field-label">성찰</label>
       <textarea id="reflection" rows="4" placeholder="오늘 하루를 돌아보며..."></textarea>
     </div>
@@ -85,18 +124,35 @@
   </div>
 
   <div class="btn-row">
-    <button class="btn-reset" onclick="clearForm()">초기화</button>
-    <button class="btn-save" onclick="saveEntry()">구글 시트에 저장</button>
+    <div class="btn-nav">
+      <button class="btn-nav-item" id="btnBack" onclick="navigate(-1)">◀ 이전</button>
+      <button class="btn-nav-item" id="btnNext" onclick="navigate(1)" disabled>다음 ▶</button>
+      <button class="btn-today" id="btnToday" onclick="goToday()" style="display:none;">오늘로</button>
+    </div>
+    <div class="btn-actions">
+      <button class="btn-reset" id="btnReset" onclick="clearForm()">초기화</button>
+      <button class="btn-temp" id="btnTemp" onclick="tempSave()">임시저장</button>
+      <button class="btn-save" id="btnSave" onclick="saveEntry()">구글 시트에 저장</button>
+    </div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzMB3XaJ1hhM2OubOV5N_PU9izm36nrKbT5gg8HThNdX18H7IDPCG1qggzTiVJgitms/exec';
+const STORAGE_KEY = 'logbook_temp';
 const healthItems = ['수영','자전거','골프','산책','헬스','음주','복약'];
 const checks = {};
+let isViewMode = false;
+let autoSaveTimer = null;
+let sheetRows = [];
+let currentRowIdx = -1;
+
+const dateField = document.getElementById('dateField');
 const healthGrid = document.getElementById('healthGrid');
 
+// ── 건강관리 체크박스 ──
 healthItems.forEach(item => {
   checks[item] = false;
   const div = document.createElement('div');
@@ -108,14 +164,21 @@ healthItems.forEach(item => {
   cb.addEventListener('change', e => {
     checks[item] = e.target.checked;
     div.classList.toggle('checked', e.target.checked);
+    if (!isViewMode) scheduleAutoSave();
   });
   div.addEventListener('click', e => {
-    if (e.target.tagName !== 'INPUT') {
+    if (e.target.tagName !== 'INPUT' && !isViewMode) {
       cb.checked = !cb.checked;
       cb.dispatchEvent(new Event('change'));
     }
   });
   healthGrid.appendChild(div);
+});
+
+['activity','memo','reflection','tomorrow','today_todo'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    if (!isViewMode) scheduleAutoSave();
+  });
 });
 
 function getTodayStr() {
@@ -128,13 +191,6 @@ function getDayLabel(dateStr) {
   return `${dateStr} (${days[d.getDay()]}요일)`;
 }
 
-const dateField = document.getElementById('dateField');
-dateField.value = getTodayStr();
-document.getElementById('dayLabel').textContent = getDayLabel(getTodayStr());
-dateField.addEventListener('change', () => {
-  document.getElementById('dayLabel').textContent = getDayLabel(dateField.value);
-});
-
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -142,12 +198,192 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
+// ── 임시저장 ──
+function getCurrentData() {
+  return {
+    date: dateField.value,
+    activity: document.getElementById('activity').value,
+    memo: document.getElementById('memo').value,
+    health: healthItems.filter(i => checks[i]),
+    reflection: document.getElementById('reflection').value,
+    today_todo: document.getElementById('today_todo').value,
+    tomorrow: document.getElementById('tomorrow').value,
+    savedAt: new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'})
+  };
+}
+
+function tempSave() {
+  const data = getCurrentData();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  document.getElementById('autosaveLabel').textContent = `임시저장 ${data.savedAt}`;
+  showToast('임시저장되었습니다');
+}
+
+function scheduleAutoSave() {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    if (!isViewMode) {
+      const data = getCurrentData();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      document.getElementById('autosaveLabel').textContent = `자동저장 ${data.savedAt}`;
+    }
+  }, 3000);
+}
+
+function loadTempSave() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return false;
+  try {
+    const data = JSON.parse(raw);
+    if (data.date !== getTodayStr()) return false;
+    dateField.value = data.date;
+    document.getElementById('dayLabel').textContent = getDayLabel(data.date);
+    document.getElementById('activity').value = data.activity || '';
+    document.getElementById('memo').value = data.memo || '';
+    document.getElementById('reflection').value = data.reflection || '';
+    document.getElementById('today_todo').value = data.today_todo || '';
+    document.getElementById('tomorrow').value = data.tomorrow || '';
+    healthItems.forEach(item => {
+      checks[item] = (data.health || []).includes(item);
+      const cb = document.getElementById('cb_' + item);
+      if (cb) cb.checked = checks[item];
+      const div = document.getElementById('hi_' + item);
+      if (div) div.classList.toggle('checked', checks[item]);
+    });
+    if (data.savedAt) {
+      document.getElementById('autosaveLabel').textContent = `자동저장 ${data.savedAt}`;
+    }
+    return true;
+  } catch(e) { return false; }
+}
+
+// ── 전날 할 일 표시 ──
+function loadYesterdayTodo() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
+  try {
+    const data = JSON.parse(raw);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yStr = yesterday.toISOString().split('T')[0];
+    if (data.date === yStr && data.tomorrow) {
+      const el = document.getElementById('today_todo');
+      if (el && !el.value) el.value = data.tomorrow;
+    }
+  } catch(e) {}
+}
+
+// ── 조회 모드 ──
+function setViewMode(on) {
+  isViewMode = on;
+  ['activity','memo','reflection','tomorrow','today_todo'].forEach(id => {
+    document.getElementById(id).readOnly = on;
+  });
+  dateField.readOnly = on;
+  healthItems.forEach(item => {
+    const div = document.getElementById('hi_' + item);
+    if (div) div.classList.toggle('readonly', on);
+  });
+  document.getElementById('viewBadge').classList.toggle('show', on);
+  document.getElementById('btnReset').style.display = on ? 'none' : '';
+  document.getElementById('btnTemp').style.display = on ? 'none' : '';
+  document.getElementById('btnSave').style.display = on ? 'none' : '';
+  document.getElementById('btnToday').style.display = on ? '' : 'none';
+  document.getElementById('yesterdayTodo').style.display = on ? 'none' : '';
+}
+
+function fillForm(data) {
+  dateField.value = data.date || getTodayStr();
+  document.getElementById('dayLabel').textContent = getDayLabel(dateField.value);
+  document.getElementById('activity').value = data.activity || '';
+  document.getElementById('memo').value = data.memo || '';
+  document.getElementById('reflection').value = data.reflection || '';
+  document.getElementById('today_todo').value = data.today_todo || '';
+  document.getElementById('tomorrow').value = data.tomorrow || '';
+  const healthArr = typeof data.health === 'string'
+    ? data.health.split(',').map(s => s.trim())
+    : (data.health || []);
+  healthItems.forEach(item => {
+    checks[item] = healthArr.includes(item);
+    const cb = document.getElementById('cb_' + item);
+    if (cb) cb.checked = checks[item];
+    const div = document.getElementById('hi_' + item);
+    if (div) div.classList.toggle('checked', checks[item]);
+  });
+}
+
+// ── 구글 시트 조회 ──
+async function fetchAllRows() {
+  try {
+    showToast('기록을 불러오는 중...');
+    const res = await fetch(SCRIPT_URL + '?action=getAll');
+    const json = await res.json();
+    sheetRows = json.rows || [];
+  } catch(e) {
+    sheetRows = [];
+    showToast('기록 조회 실패 — 연결을 확인해주세요');
+  }
+}
+
+async function navigate(dir) {
+  if (sheetRows.length === 0) {
+    await fetchAllRows();
+  }
+  if (sheetRows.length === 0) {
+    showToast('저장된 기록이 없습니다');
+    return;
+  }
+  if (!isViewMode) {
+    currentRowIdx = sheetRows.length;
+  }
+  currentRowIdx += dir;
+  if (currentRowIdx < 0) currentRowIdx = 0;
+  if (currentRowIdx >= sheetRows.length) {
+    goToday();
+    return;
+  }
+  fillForm(sheetRows[currentRowIdx]);
+  setViewMode(true);
+  document.getElementById('btnBack').disabled = currentRowIdx <= 0;
+  document.getElementById('btnNext').disabled = false;
+}
+
+function goToday() {
+  currentRowIdx = -1;
+  sheetRows = [];
+  setViewMode(false);
+  const loaded = loadTempSave();
+  if (!loaded) {
+    dateField.value = getTodayStr();
+    document.getElementById('dayLabel').textContent = getDayLabel(getTodayStr());
+    document.getElementById('activity').value = '';
+    document.getElementById('memo').value = '';
+    document.getElementById('reflection').value = '';
+    document.getElementById('tomorrow').value = '';
+    healthItems.forEach(item => {
+      checks[item] = false;
+      const cb = document.getElementById('cb_' + item);
+      if (cb) cb.checked = false;
+      const div = document.getElementById('hi_' + item);
+      if (div) div.classList.remove('checked');
+    });
+  }
+  loadYesterdayTodo();
+  document.getElementById('btnBack').disabled = false;
+  document.getElementById('btnNext').disabled = true;
+}
+
+// ── 초기화 ──
 function clearForm() {
+  localStorage.removeItem(STORAGE_KEY);
+  document.getElementById('autosaveLabel').textContent = '';
+  document.getElementById('yesterdayTodo').classList.remove('show');
   dateField.value = getTodayStr();
   document.getElementById('dayLabel').textContent = getDayLabel(getTodayStr());
   document.getElementById('activity').value = '';
   document.getElementById('memo').value = '';
   document.getElementById('reflection').value = '';
+  document.getElementById('today_todo').value = '';
   document.getElementById('tomorrow').value = '';
   healthItems.forEach(item => {
     checks[item] = false;
@@ -159,20 +395,15 @@ function clearForm() {
   showToast('초기화되었습니다');
 }
 
-// ★ Apps Script URL을 아래에 붙여넣으세요
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzMB3XaJ1hhM2OubOV5N_PU9izm36nrKbT5gg8HThNdX18H7IDPCG1qggzTiVJgitms/exec';
-
+// ── 구글 시트 저장 ──
 async function saveEntry() {
-  if (SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
-    showToast('⚠ Apps Script URL을 먼저 설정해주세요');
-    return;
-  }
   const data = {
     date: dateField.value,
     activity: document.getElementById('activity').value,
     memo: document.getElementById('memo').value,
     health: healthItems.filter(i => checks[i]).join(', '),
     reflection: document.getElementById('reflection').value,
+    today_todo: document.getElementById('today_todo').value,
     tomorrow: document.getElementById('tomorrow').value
   };
   try {
@@ -182,12 +413,27 @@ async function saveEntry() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    showToast('✓ 저장되었습니다');
+    localStorage.removeItem(STORAGE_KEY);
+    document.getElementById('autosaveLabel').textContent = '';
+    showToast('✓ 구글 시트에 저장되었습니다');
     clearForm();
-  } catch (e) {
+  } catch(e) {
     showToast('저장 실패 — 연결을 확인해주세요');
   }
 }
+
+// ── 시작 ──
+dateField.value = getTodayStr();
+document.getElementById('dayLabel').textContent = getDayLabel(getTodayStr());
+dateField.addEventListener('change', () => {
+  document.getElementById('dayLabel').textContent = getDayLabel(dateField.value);
+  if (!isViewMode) scheduleAutoSave();
+});
+
+const loaded = loadTempSave();
+if (loaded) showToast('임시저장된 내용을 불러왔습니다');
+loadYesterdayTodo();
+document.getElementById('btnNext').disabled = true;
 </script>
 </body>
 </html>
