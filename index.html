@@ -589,9 +589,59 @@ async function loadMonthTotal() {
 
 // ── 날짜 변경 이벤트 ──
 var dateField = document.getElementById('dateField');
-dateField.addEventListener('change', function() {
-  document.getElementById('dayLabel').textContent = getDayLabel(dateField.value);
-  if (!viewMode) scheduleAutoSave();
+dateField.addEventListener('change', async function() {
+  var newDate = dateField.value;
+  document.getElementById('dayLabel').textContent = getDayLabel(newDate);
+  if (!viewMode) {
+    // 날짜 변경 시 항목 초기화
+    document.getElementById('today_todo').value = '';
+    document.getElementById('activity').value = '';
+    document.getElementById('memo').value = '';
+    document.getElementById('reflection').value = '';
+    document.getElementById('tomorrow').value = '';
+    document.getElementById('expCashAmt').value = '';
+    document.getElementById('expCashDesc').value = '';
+    document.getElementById('expCardAmt').value = '';
+    document.getElementById('expCardDesc').value = '';
+    document.getElementById('expTransferAmt').value = '';
+    document.getElementById('expTransferDesc').value = '';
+    healthItems.forEach(function(item) {
+      checks[item] = false;
+      var cb = document.getElementById('cb_' + item);
+      if (cb) cb.checked = false;
+      var div = document.getElementById('hi_' + item);
+      if (div) div.classList.remove('checked');
+    });
+
+    // 변경한 날짜의 전날 "내일 할 일" 로드
+    var prevDate = new Date(newDate + 'T00:00:00');
+    prevDate.setDate(prevDate.getDate() - 1);
+    var prevStr = prevDate.toISOString().split('T')[0];
+
+    // 로컬스토리지에서 먼저 시도
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      try {
+        var data = JSON.parse(raw);
+        if (data.date === prevStr && data.tomorrow) {
+          document.getElementById('today_todo').value = data.tomorrow;
+          scheduleAutoSave();
+          return;
+        }
+      } catch(e) {}
+    }
+
+    // 구글 시트에서 읽어오기
+    try {
+      var res = await fetch(SCRIPT_URL + '?action=getByDate&date=' + prevStr);
+      var json = await res.json();
+      if (json.row && json.row.tomorrow) {
+        document.getElementById('today_todo').value = json.row.tomorrow;
+      }
+    } catch(e) {}
+
+    scheduleAutoSave();
+  }
 });
 
 // ── 시작 ──
