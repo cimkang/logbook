@@ -23,7 +23,7 @@
   input[type="date"] { width: 200px; padding: 8px 12px; font-size: 15px; border: 1px solid #e0ddd6; border-radius: 8px; background: #faf9f7; color: #1a1a1a; font-family: inherit; }
   textarea { width: 100%; padding: 10px 12px; font-size: 15px; border: 1px solid #e0ddd6; border-radius: 8px; background: #faf9f7; color: #1a1a1a; font-family: inherit; resize: vertical; line-height: 1.7; }
   input[type="date"]:focus, textarea:focus { outline: none; border-color: #aaa; background: #fff; }
-  textarea.readonly, input.readonly { background: #f0ede8; color: #555; }
+  textarea.readonly, input.readonly { background: #f0ede8; color: #555; resize: none; overflow-y: auto; }
   .health-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .health-item { display: flex; align-items: center; gap: 7px; padding: 9px 10px; border: 1px solid #e0ddd6; border-radius: 8px; background: #faf9f7; cursor: pointer; transition: all 0.15s; user-select: none; }
   .health-item:hover { background: #f0ede6; }
