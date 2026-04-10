@@ -418,13 +418,11 @@ async function saveEdit() {
       body: JSON.stringify(data)
     });
     showToast('✓ 수정되었습니다');
-    // 조회 모드로 복귀
     document.getElementById('viewBadge').style.background = '#3a7bd5';
     document.getElementById('viewBadge').textContent = '조회 중';
     setViewMode(true);
     document.getElementById('btnEdit').style.display = '';
     document.getElementById('btnEditSave').style.display = 'none';
-    // rows 배열 업데이트
     if (rowIdx >= 0 && rowIdx < rows.length) {
       rows[rowIdx] = data;
     }
@@ -566,7 +564,18 @@ async function saveEntry() {
     localStorage.removeItem(STORAGE_KEY);
     document.getElementById('autosaveLabel').textContent = '';
     showToast('✓ 구글 시트에 저장되었습니다');
-    clearForm();
+    var savedDate = document.getElementById('dateField').value;
+    var todayStr = getTodayStr();
+    if (savedDate < todayStr) {
+      // 과거 날짜 저장 후 오늘로 복귀
+      dateField.value = todayStr;
+      document.getElementById('dayLabel').textContent = getDayLabel(todayStr);
+      loadTempSave();
+      loadYesterdayTodo();
+      showToast('✓ 저장 완료. 오늘 날짜로 복귀합니다');
+    } else {
+      clearForm();
+    }
     loadMonthTotal();
   } catch(e) {
     showToast('저장 실패 — 연결을 확인해주세요');
@@ -591,9 +600,70 @@ async function loadMonthTotal() {
 var dateField = document.getElementById('dateField');
 dateField.addEventListener('change', async function() {
   var newDate = dateField.value;
-  document.getElementById('dayLabel').textContent = getDayLabel(newDate);
+  var today = getTodayStr();
+
   if (!viewMode) {
-    // 날짜 변경 시 항목 초기화
+    // 과거 날짜 선택 시
+    if (newDate < today) {
+      // 구글 시트에서 해당 날짜 레코드 확인
+      try {
+        var res = await fetch(SCRIPT_URL + '?action=getByDate&date=' + newDate);
+        var json = await res.json();
+        if (json.row) {
+          // 레코드 있음 → 오늘로 복귀 + 안내
+          dateField.value = today;
+          document.getElementById('dayLabel').textContent = getDayLabel(today);
+          showToast('이미 기록이 있습니다. 이전 버튼으로 조회하세요');
+          return;
+        }
+        // 레코드 없음 → 해당 날짜로 입력 화면 열기
+        document.getElementById('dayLabel').textContent = getDayLabel(newDate);
+        showToast(newDate + ' 날짜로 입력합니다');
+      } catch(e) {
+        dateField.value = today;
+        document.getElementById('dayLabel').textContent = getDayLabel(today);
+        showToast('날짜 확인 실패 — 연결을 확인해주세요');
+      }
+      return;
+    }
+
+    // 오늘/미래 날짜 선택 시
+    // 임시저장 내용이 있으면 구글 시트에 자동 저장
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      try {
+        var tempData = JSON.parse(raw);
+        if (tempData.date && tempData.date <= today) {
+          var saveData = {
+            date: tempData.date,
+            today_todo: tempData.today_todo || '',
+            activity: tempData.activity || '',
+            memo: tempData.memo || '',
+            health: (tempData.health || []).join(', '),
+            reflection: tempData.reflection || '',
+            tomorrow: tempData.tomorrow || '',
+            expCashAmt: tempData.expCashAmt || '',
+            expCashDesc: tempData.expCashDesc || '',
+            expCardAmt: tempData.expCardAmt || '',
+            expCardDesc: tempData.expCardDesc || '',
+            expTransferAmt: tempData.expTransferAmt || '',
+            expTransferDesc: tempData.expTransferDesc || ''
+          };
+          await fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(saveData)
+          });
+          localStorage.removeItem(STORAGE_KEY);
+          document.getElementById('autosaveLabel').textContent = '';
+          showToast('✓ 이전 내용이 자동 저장되었습니다');
+        }
+      } catch(e) {}
+    }
+
+    // 새 날짜로 초기화
+    document.getElementById('dayLabel').textContent = getDayLabel(newDate);
     document.getElementById('today_todo').value = '';
     document.getElementById('activity').value = '';
     document.getElementById('memo').value = '';
@@ -613,33 +683,19 @@ dateField.addEventListener('change', async function() {
       if (div) div.classList.remove('checked');
     });
 
-    // 변경한 날짜의 전날 "내일 할 일" 로드
+    // 전날 "내일 할 일" 로드
     var prevDate = new Date(newDate + 'T00:00:00');
     prevDate.setDate(prevDate.getDate() - 1);
     var prevStr = prevDate.toISOString().split('T')[0];
-
-    // 로컬스토리지에서 먼저 시도
-    var raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      try {
-        var data = JSON.parse(raw);
-        if (data.date === prevStr && data.tomorrow) {
-          document.getElementById('today_todo').value = data.tomorrow;
-          scheduleAutoSave();
-          return;
-        }
-      } catch(e) {}
-    }
-
-    // 구글 시트에서 읽어오기
     try {
-      var res = await fetch(SCRIPT_URL + '?action=getByDate&date=' + prevStr);
-      var json = await res.json();
-      if (json.row && json.row.tomorrow) {
-        document.getElementById('today_todo').value = json.row.tomorrow;
+      var res2 = await fetch(SCRIPT_URL + '?action=getByDate&date=' + prevStr);
+      var json2 = await res2.json();
+      if (json2.row && json2.row.tomorrow) {
+        document.getElementById('today_todo').value = json2.row.tomorrow;
       }
     } catch(e) {}
 
+    loadMonthTotal();
     scheduleAutoSave();
   }
 });
